@@ -1,0 +1,15 @@
+# Ambiente
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Segredos
+.env
+
+# Dados internos do Postgres local (não versionar)
+data/postgres_storage/
+
+# Editor
+.vscode/
+.idea/
