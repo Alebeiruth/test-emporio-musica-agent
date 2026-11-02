@@ -26,7 +26,8 @@ python -m venv .venv
 # source .venv/bin/activate       # Linux/macOS
 pip install -r requirements.txt
 cp .env.example .env              # then set LLM_API_KEY in .env
-python main.py                    # chat with Mia (type "sair" to exit)
+streamlit run app.py              # web chat interface (opens in the browser)
+python main.py                    # terminal chat (type "sair" to exit)
 python main.py --debug            # also shows tool calls and prompt-cache usage
 python main.py --salvar exemplos/minha_conversa.md   # saves the conversation as Markdown
 ```
@@ -229,20 +230,33 @@ the store's database.
 - **Complaints:** there is no complaint-registration system, so Mia does not claim to register
   them; she summarizes the issue and offers every channel (WhatsApp, e-mail, store phone).
 - **Payment calculation:** PIX price and maximum interest-free installments are computed in
-  Python (`condicoes_pagamento` in `tools.py`) and returned with each product, so the model
+  Python (`condicoes_pagamento` in `emporio/tools.py`) and returned with each product, so the model
   never does the arithmetic. This was added after an early test where the model generalized
   "up to 6x" to products that, by section 3.1, only allow 5x. Rules: PIX 5% not cumulative
   with promotions; up to 3x with a minimum installment of R$ 50 (interpretation of "no minimum,
   except below R$ 50"); 4x–6x minimum R$ 80; 7x–12x minimum R$ 100.
 - **Policies:** full text of the manual in the system prompt.
-- **Interface:** CLI.
+- **Interfaces:** web chat (Streamlit, `app.py`) and terminal (`main.py`), both on top of the
+  same core package — the interfaces only handle input/output.
 - **Visual standard:** since the real channel is WhatsApp, Mia writes with WhatsApp formatting
-  and a fixed style guide (defined in `prompts.py`): `*bold*` only for product names, prices,
+  and a fixed style guide (defined in `emporio/prompts.py`): `*bold*` only for product names, prices,
   deadlines, order numbers and contacts; `• ` bullet lists with at most 6 items; prices as
   `R$ 1.234,56`; at most 2 emojis per message; short paragraphs ending with a question. The
   CLI renders `*bold*` as terminal bold, and saved transcripts convert it to Markdown bold.
 - **History:** in-memory list of messages during the session.
-- **Files:** `tools.py`, `prompts.py`, `agent.py`, `main.py`, `exemplos/*.md`.
+- **Project structure:**
+
+```
+app.py                 web interface (Streamlit)
+main.py                terminal interface (CLI, --debug, --salvar)
+emporio/               core package, independent of the interface
+  tools.py             data tools over the CSVs + tool definitions for the model
+  prompts.py           Mia's persona, rules and the full policy manual (read from the PDF)
+  agent.py             agent loop with Claude (function calling)
+  formatacao.py        visual standard (WhatsApp *bold*) for terminal, Markdown and web
+data/                  CSVs and policy manual (source data)
+exemplos/              example conversations (.md) and their input scripts (roteiros/)
+```
 
 ---
 
