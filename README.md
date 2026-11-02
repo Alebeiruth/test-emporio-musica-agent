@@ -12,7 +12,30 @@ The agent must:
   (returns, opening hours, payment);
 - handle out-of-scope questions appropriately.
 
-> **How to run:** _to be completed once the implementation is finished._
+The agent is **Mia**, Empório da Música's virtual assistant.
+
+## How to run
+
+Requirements: Python 3.11+ (developed on 3.13) and an Anthropic API key.
+
+```bash
+git clone https://github.com/Alebeiruth/emporio-musica-agent.git
+cd emporio-musica-agent
+python -m venv .venv
+.venv\Scripts\Activate.ps1        # Windows (PowerShell)
+# source .venv/bin/activate       # Linux/macOS
+pip install -r requirements.txt
+cp .env.example .env              # then set LLM_API_KEY in .env
+python main.py                    # chat with Mia (type "sair" to exit)
+python main.py --debug            # also shows tool calls and prompt-cache usage
+```
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `LLM_API_KEY` | yes | — | Anthropic API key |
+| `LLM_MODEL` | no | `claude-opus-5-5` | Claude model |
+| `LLM_EFFORT` | no | `medium` | Reasoning effort (`low` … `max`) |
+| `DATA_REFERENCIA` | no | today | "Today" for deadline calculations (`YYYY-MM-DD`). The data is frozen in 2025–2026, so e.g. `2025-12-08` makes return windows realistic. |
 
 ---
 
@@ -190,9 +213,14 @@ the store's database.
 
 ## 5. Architecture
 
-- **Approach:** agent with function calling (the model decides when to call each tool).
-- **Tools:** `buscar_produtos(nome, categoria, preco_max)`, `consultar_pedido(id_pedido)`,
-  `listar_promocoes()`.
+- **Approach:** agent with function calling (the model decides when to call each tool),
+  implemented as a manual tool-use loop with the Anthropic Python SDK.
+- **Model:** Claude Opus 5.5 (configurable). Server-side refusal fallback enabled
+  (`fallbacks: "default"`); prompt caching on the static prefix (tools + instructions + manual).
+- **Tools:** `buscar_produtos(nome, categoria, preco_max, apenas_disponiveis)`,
+  `consultar_pedido(id_pedido)`, `listar_promocoes(incluir_inativas)`, `listar_categorias()`.
+- **Complaints:** there is no complaint-registration system, so Mia does not claim to register
+  them; she summarizes the issue and offers every channel (WhatsApp, e-mail, store phone).
 - **Policies:** full text of the manual in the system prompt.
 - **Interface:** CLI.
 - **History:** in-memory list of messages during the session.
