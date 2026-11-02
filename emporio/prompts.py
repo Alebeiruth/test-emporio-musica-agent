@@ -13,7 +13,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-PDF_POLITICAS = Path(__file__).parent / "data" / "políticas_da_loja.pdf"
+PDF_POLITICAS = Path(__file__).resolve().parent.parent / "data" / "políticas_da_loja.pdf"
 
 DIAS_SEMANA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira",
                "sexta-feira", "sábado", "domingo"]

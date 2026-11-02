@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 STATUS_PRODUTO = {
     "active": "ativo",

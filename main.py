@@ -11,32 +11,19 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 from pathlib import Path
 
 import anthropic
 from dotenv import load_dotenv
 
+from emporio import AgenteEmporio
+from emporio.formatacao import para_markdown, para_terminal
+from emporio.tools import data_referencia
+
 load_dotenv()
 
-from agent import AgenteEmporio  # noqa: E402  (depois do load_dotenv: lê LLM_MODEL etc.)
-from tools import data_referencia  # noqa: E402
-
 SAIR = {"sair", "exit", "quit"}
-NEGRITO_WHATSAPP = re.compile(r"\*([^*\n]+)\*")
-
-
-def para_terminal(texto: str, cores: bool) -> str:
-    """*negrito* (padrão WhatsApp) vira negrito ANSI no terminal."""
-    substituto = "\033[1m\\1\033[0m" if cores else "\\1"
-    return NEGRITO_WHATSAPP.sub(substituto, texto)
-
-
-def para_markdown(texto: str) -> str:
-    """*negrito* do WhatsApp vira **negrito** do Markdown, com quebras de linha preservadas."""
-    texto = NEGRITO_WHATSAPP.sub(r"**\1**", texto)
-    return "\n".join(linha + "  " if linha.strip() else "" for linha in texto.splitlines())
 
 
 class Transcricao:

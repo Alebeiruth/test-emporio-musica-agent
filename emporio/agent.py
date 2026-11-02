@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 
 import anthropic
 
-from prompts import montar_system
-from tools import TOOLS, data_referencia, executar_ferramenta
+from .prompts import montar_system
+from .tools import TOOLS, data_referencia, executar_ferramenta
 
 MODELO_PADRAO = "claude-opus-5-5"
 ESFORCO_PADRAO = "medium"
