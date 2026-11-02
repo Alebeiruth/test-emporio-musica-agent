@@ -131,6 +131,46 @@ change after the purchase, an unrecorded discount, or a data error.
 RAG would make sense with a manual of hundreds of pages, or a catalog of thousands of
 products requiring semantic search over descriptions ("a good guitar for MPB").
 
+### Token usage: full manual in the prompt vs. RAG
+
+Per call, RAG sends fewer tokens (only the retrieved chunks, ~500–1,000 tokens, versus
+~4,000 for the full manual). Over a conversation, however, **prompt caching** changes the
+math: the manual is a static prefix, so after the first call it is read from the cache at
+~10% of the normal input price. RAG chunks change on every question and barely benefit
+from caching.
+
+Rough estimate for a 10-message conversation (~20 model calls, since tool use adds calls):
+
+| Strategy | Policy tokens (input-price equivalent) |
+|---|---|
+| Full manual, no cache | 20 × 4k = ~80k |
+| Full manual, with cache | 1 write (~1.25×) + 19 reads (~0.1×) = **~12–13k** |
+| RAG | 20 × ~800 = ~16k + embedding/vector search cost |
+
+With caching, the full-manual approach costs about the same as RAG (or less) and avoids
+RAG's main risk here: retrieving an incomplete chunk for questions that span several
+sections.
+
+### Scalability: what changes as the store grows
+
+RAG solves **unstructured text**, not structured data, so growth affects each source
+differently:
+
+| Source | Today | At scale |
+|---|---|---|
+| Policy manual | Full text in the system prompt, cached | RAG once it reaches tens of thousands of tokens or many documents (manufacturer manuals, FAQ, support history) |
+| Products (filters) | Tool + pandas | Same tool backed by a database (SQL) |
+| Products (meaning-based search, e.g. "a good guitar for MPB") | Not needed | **Hybrid**: a new vector-search tool (e.g. pgvector) combined with exact SQL filters (price, stock, status) |
+| Customers and orders | Tool + pandas | Tool + database; never RAG (lookups by ID) |
+
+- The catalog never enters the prompt: tools return at most 15 filtered products, so
+  token usage per query is the same with 65 or 50,000 products. Only the data backend
+  changes (CSV → Postgres), without touching the agent.
+- Vector search would be **worse** for structured queries: "guitars under R$ 1,000 in
+  stock" needs exact filters, and order lookups are by ID.
+- When RAG becomes useful, it is added as **one more tool** the model can choose, not a
+  replacement for the existing ones — the architecture stays the same.
+
 ### Orders and order items kept as separate files
 
 `orders.csv` and `order_items.csv` are **not merged on disk**. An order has 1..N items,
