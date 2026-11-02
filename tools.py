@@ -85,7 +85,35 @@ def _promocao_ativa(product_id: int) -> dict | None:
     }
 
 
+def _max_parcelas(valor: float) -> int:
+    """Maior número de parcelas sem juros pela seção 3.1 do manual.
+
+    Até 3x: parcela mínima de R$ 50 (interpretação de "sem valor mínimo, exceto abaixo de
+    R$ 50"); 4x–6x: mínimo R$ 80; 7x–12x: mínimo R$ 100.
+    """
+    def minimo(n: int) -> float:
+        return 50 if n <= 3 else 80 if n <= 6 else 100
+
+    return max((n for n in range(1, 13) if n == 1 or valor / n >= minimo(n)), default=1)
+
+
+def condicoes_pagamento(preco: float, promocao: dict | None) -> dict:
+    """Calcula PIX e parcelamento de forma determinística (o modelo não faz contas)."""
+    valor = promocao["preco_promocional_brl"] if promocao else preco
+    parcelas = _max_parcelas(valor)
+    return {
+        "valor_base_brl": round(valor, 2),
+        # PIX não é cumulativo com promoção (seção 6.2).
+        "preco_pix_brl": round(valor, 2) if promocao else round(preco * 0.95, 2),
+        "pix_tem_desconto_adicional": promocao is None,
+        "max_parcelas_sem_juros": parcelas,
+        "valor_parcela_no_maximo_brl": round(valor / parcelas, 2),
+        "permite_combinar_pix_e_cartao": valor > 2000,
+    }
+
+
 def _formatar_produto(linha: pd.Series) -> dict:
+    promocao = _promocao_ativa(int(linha["product_id"]))
     return {
         "id": int(linha["product_id"]),
         "nome": linha["name"],
@@ -95,7 +123,8 @@ def _formatar_produto(linha: pd.Series) -> dict:
         "status": STATUS_PRODUTO.get(linha["status"], linha["status"]),
         "descricao": linha["description"],
         "especificacoes": json.loads(linha["specs"]),
-        "promocao_ativa": _promocao_ativa(int(linha["product_id"])),
+        "promocao_ativa": promocao,
+        "pagamento": condicoes_pagamento(float(linha["price_brl"]), promocao),
     }
 
 
