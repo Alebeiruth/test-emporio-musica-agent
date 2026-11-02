@@ -214,7 +214,7 @@ with product names.
 ### No database
 
 With 65 products and 20 orders, pandas in memory is enough, and the evaluator can run the
-project with just `pip install` + `python main.py`. In production the data would come from
+project with just `pip install` + `streamlit run app.py` (or `python main.py`). In production the data would come from
 the store's database.
 
 ---
@@ -317,7 +317,8 @@ scripts are in `exemplos/roteiros/` and can be replayed.
   on reasoning not backed by a tool. Critical numbers (prices, stock, installments, order
   totals) come from tools to reduce that risk. There is no automated eval suite — the
   scenarios in `exemplos/` were checked manually.
-- **CLI only:** no WhatsApp integration or web interface.
+- **No real channel integration:** the web interface (Streamlit) and the CLI are for local
+  demonstration only; there is no WhatsApp integration.
 
 ### With more time
 
