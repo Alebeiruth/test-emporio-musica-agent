@@ -19,8 +19,8 @@ The agent is **Mia**, Empório da Música's virtual assistant.
 Requirements: Python 3.11+ (developed on 3.13) and an Anthropic API key.
 
 ```bash
-git clone https://github.com/Alebeiruth/emporio-musica-agent.git
-cd emporio-musica-agent
+git clone https://github.com/Alebeiruth/test-emporio-musica-agent.git
+cd test-emporio-musica-agent
 python -m venv .venv
 .venv\Scripts\Activate.ps1        # Windows (PowerShell)
 # source .venv/bin/activate       # Linux/macOS
@@ -28,7 +28,11 @@ pip install -r requirements.txt
 cp .env.example .env              # then set LLM_API_KEY in .env
 python main.py                    # chat with Mia (type "sair" to exit)
 python main.py --debug            # also shows tool calls and prompt-cache usage
+python main.py --salvar exemplos/minha_conversa.md   # saves the conversation as Markdown
 ```
+
+Scripted conversations can be replayed from a file:
+`python main.py --salvar exemplos/01_preco_e_pagamento.md < exemplos/roteiros/01_preco_e_pagamento.txt`
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
@@ -130,6 +134,9 @@ change after the purchase, an unrecorded discount, or a data error.
   deadline calculations (e.g. the 7-day withdrawal right) is configurable.
 - 12 orders have no tracking code / estimated delivery — expected, as they were not shipped.
 - Product names contain typos (e.g. "Cedr"), so product search is partial and case-insensitive.
+- Orders 9 (R$ 349.90 in 6x) and 16 (R$ 429.90 in 6x) break the installment rule of section
+  3.1 (4x–6x requires a minimum installment of R$ 80). They are historical records, so they
+  were kept as they are; for new quotes the agent applies the rule (see "Payment calculation").
 
 ### 3.3 Contradictions in the policy manual
 
@@ -221,8 +228,19 @@ the store's database.
   `consultar_pedido(id_pedido)`, `listar_promocoes(incluir_inativas)`, `listar_categorias()`.
 - **Complaints:** there is no complaint-registration system, so Mia does not claim to register
   them; she summarizes the issue and offers every channel (WhatsApp, e-mail, store phone).
+- **Payment calculation:** PIX price and maximum interest-free installments are computed in
+  Python (`condicoes_pagamento` in `tools.py`) and returned with each product, so the model
+  never does the arithmetic. This was added after an early test where the model generalized
+  "up to 6x" to products that, by section 3.1, only allow 5x. Rules: PIX 5% not cumulative
+  with promotions; up to 3x with a minimum installment of R$ 50 (interpretation of "no minimum,
+  except below R$ 50"); 4x–6x minimum R$ 80; 7x–12x minimum R$ 100.
 - **Policies:** full text of the manual in the system prompt.
 - **Interface:** CLI.
+- **Visual standard:** since the real channel is WhatsApp, Mia writes with WhatsApp formatting
+  and a fixed style guide (defined in `prompts.py`): `*bold*` only for product names, prices,
+  deadlines, order numbers and contacts; `• ` bullet lists with at most 6 items; prices as
+  `R$ 1.234,56`; at most 2 emojis per message; short paragraphs ending with a question. The
+  CLI renders `*bold*` as terminal bold, and saved transcripts convert it to Markdown bold.
 - **History:** in-memory list of messages during the session.
 - **Files:** `tools.py`, `prompts.py`, `agent.py`, `main.py`, `exemplos/*.md`.
 
@@ -233,11 +251,65 @@ the store's database.
 This project was developed with **Claude Code** using the **Claude Opus 5.5** model, one of
 the most widely adopted and recognized AI agent tools, both professionally and otherwise.
 It was used to review the project setup (git, `.gitignore`, virtual environment),
-explore the data and the policy manual, map inconsistencies, discuss the architecture and
-write this documentation. All decisions and data corrections were reviewed by the author.
+explore the data and the policy manual, map inconsistencies, discuss the architecture
+(including the RAG trade-off), implement the code, run and review the example conversations,
+and write this documentation. Product decisions (Mia's name, offering every contact channel
+for complaints, the visual standard, the example scenarios) and data corrections came from
+the author, and every step was reviewed by the author. Errors found while reviewing the
+examples (input encoding on Windows, installment generalization) were fixed in the code
+rather than by editing the transcripts.
 
 ---
 
-## 7. Limitations
+## 7. Example conversations
 
-_To be completed._
+Real conversations generated with `python main.py --salvar` (reference date 25/03/2026, right
+after the last order in the data). Each transcript shows which tools Mia called. The input
+scripts are in `exemplos/roteiros/` and can be replayed.
+
+| # | File | Scenario | What it shows |
+|---|---|---|---|
+| 1 | [01_preco_e_pagamento](exemplos/01_preco_e_pagamento.md) | Price of the Takamine GD20, PIX, 10x, shipping | Data lookup + payment and shipping policies |
+| 2 | [02_violao_iniciante](exemplos/02_violao_iniciante.md) | Beginner guitar up to R$ 1,000, then nylon for MPB | Filtered search and recommendation |
+| 3 | [03_loja_e_entrega](exemplos/03_loja_e_entrega.md) | Address, opening hours, delivery to Dourados | Policy-only answers (no tool calls) |
+| 4 | [04_promocoes](exemplos/04_promocoes.md) | Expired Black Friday, active promotions, PIX + promotion | Expired promotion handling, non-cumulative discounts |
+| 5 | [05_fora_do_escopo](exemplos/05_fora_do_escopo.md) | Strings/amplifier, saxophone, football | Accessories redirect, empty category, off-topic |
+| 6 | [06_reclamacao](exemplos/06_reclamacao.md) | **Complaint:** ukulele with a warped neck (order 7) | Non-trivial: crosses order data, 30-day exchange, 90-day legal warranty and contact channels |
+| 7 | [07_informacao_pedido](exemplos/07_informacao_pedido.md) | **Information request:** late order 8, then order 14 | Overdue delivery, tracking, pending order |
+| 8 | [08_tentativa_manipulacao](exemplos/08_tentativa_manipulacao.md) | **Manipulation attempt:** prompt injection, fake manager, system prompt extraction, fake promotion | Guardrails: no invented discounts, no customer data (LGPD), no prompt disclosure |
+
+---
+
+## 8. Limitations
+
+- **No real actions:** Mia cannot register complaints, open delivery investigations, reserve
+  products or place orders. She explains this and points the customer to WhatsApp, e-mail or
+  phone.
+- **No customer authentication:** anyone who knows an order number can see its status, items
+  and the customer's first name. Defense in depth: the order tool never returns phone, e-mail
+  or city, so the model cannot leak them even if manipulated. In production, orders would be
+  checked against the WhatsApp number of the sender.
+- **Receipt date is an assumption:** the data has no actual delivery date, so the estimated
+  delivery date is used for return windows.
+- **Frozen data and reference date:** deadlines depend on `DATA_REFERENCIA`; with today's date,
+  every order is outside every return window.
+- **Business hours are not enforced:** the manual says WhatsApp outside business hours gets an
+  automatic reply; the prototype answers at any time (it only informs the hours).
+- **Shipping cost is not calculated:** the manual says it depends on ZIP code, weight and size,
+  which are not in the data; Mia gives delivery times and the free-shipping rule only.
+- **In-memory history, single session:** the conversation is lost when the program ends; long
+  sessions are not compacted.
+- **LLM non-determinism:** wording varies between runs, and the model may still make mistakes
+  on reasoning not backed by a tool. Critical numbers (prices, stock, installments, order
+  totals) come from tools to reduce that risk. There is no automated eval suite — the
+  scenarios in `exemplos/` were checked manually.
+- **CLI only:** no WhatsApp integration or web interface.
+
+### With more time
+
+- WhatsApp integration (webhook) and customer identification by phone number.
+- Tools for actions: open a complaint ticket, request a return, notify when a product is back
+  in stock.
+- An automated eval set from the example scenarios (expected tool calls + rubric).
+- Database backend (Postgres) and, for a large catalog, hybrid semantic search (see
+  "Scalability").
