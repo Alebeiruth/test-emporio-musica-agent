@@ -16,7 +16,7 @@ from tools import TOOLS, data_referencia, executar_ferramenta
 
 MODELO_PADRAO = "claude-opus-5-5"
 ESFORCO_PADRAO = "medium"
-MAX_ITERACOES = 8  # limite de chamadas ao modelo por mensagem do cliente (evita loop infinito)
+MAX_ITERACOES = 5  # limite de chamadas ao modelo por mensagem do cliente (evita loop infinito)
 
 # Fallback no servidor: se o classificador de segurança recusar, a API refaz a chamada no
 # modelo recomendado para a categoria, em vez de devolver a recusa.
@@ -28,7 +28,7 @@ MSG_RECUSA = (
 )
 MSG_LIMITE = (
     "Opa, não consegui concluir sua solicitação agora. Pode reformular a pergunta? Se "
-    "preferir, fale com a equipe pelo WhatsApp (67) 3321-4500."
+    "preferir, fale com a equipe pelo WhatsApp (67) 3321-4500 ou pelo Telefone (67) 3341-4444."
 )
 
 
